@@ -10,23 +10,30 @@ use Kaiseki\WordPress\InpsydeAssets\Loader\ViteManifestLoader;
 use Kaiseki\WordPress\InpsydeAssets\OutputFilter\ModuleTypeScriptOutputFilter;
 use Psr\Container\ContainerInterface;
 
+/**
+ * @phpstan-import-type ScriptFilterCallable from ViteManifestRegistry
+ * @phpstan-import-type StyleFilterCallable from ViteManifestRegistry
+ */
 final class ViteManifestRegistryFactory
 {
     public function __invoke(ContainerInterface $container): ViteManifestRegistry
     {
         $config = Config::get($container);
         $baseFilter = fn(Asset $asset, string $handle): Asset => $asset;
+        /** @var list<string> $files */
+        $files = $config->array('vite_manifest/files', []);
+        /** @var array<string, ScriptFilterCallable|bool> $scripts */
+        $scripts = $config->array('vite_manifest/scripts', []);
+        /** @var array<string, StyleFilterCallable|bool> $styles */
+        $styles = $config->array('vite_manifest/styles', []);
         return new ViteManifestRegistry(
             $container->get(ViteManifestLoader::class),
             $container->get(ModuleTypeScriptOutputFilter::class),
-            /** @phpstan-ignore-next-line */
-            $config->array('vite_manifest/files', []),
+            $files,
             $config->callable('vite_manifest/script_filter', $baseFilter),
-            /** @phpstan-ignore-next-line */
-            $config->array('vite_manifest/scripts', []),
+            $scripts,
             $config->callable('vite_manifest/style_filter', $baseFilter),
-            /** @phpstan-ignore-next-line */
-            $config->array('vite_manifest/styles', []),
+            $styles,
             $config->bool('vite_manifest/autoload', false),
             $config->string('vite_manifest/directory_url', ''),
             $config->string('vite_manifest/handle_prefix', ''),
