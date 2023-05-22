@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Kaiseki\WordPress\InpsydeAssets\Loader;
 
 use Inpsyde\Assets\Asset;
+use Inpsyde\Assets\BaseAsset;
 use Inpsyde\Assets\Loader\AbstractWebpackLoader;
 
+use Inpsyde\Assets\Script;
+use Inpsyde\Assets\Style;
 use function dirname;
 use function is_array;
 use function pathinfo;
@@ -75,6 +78,47 @@ class ViteManifestLoader extends AbstractWebpackLoader
         $this->handlePrefix = $handlePrefix;
 
         return $this;
+    }
+
+    /**
+     * @param string $handle
+     * @param string $fileUrl
+     * @param string $filePath
+     *
+     * @return Asset|null
+     */
+    protected function buildAsset(string $handle, string $fileUrl, string $filePath): ?Asset
+    {
+        $extensionsToClass = [
+            'css' => Style::class,
+            'scss' => Style::class,
+            'js' => Script::class,
+            'ts' => Script::class,
+        ];
+
+        /** @var array{filename?:string, extension?:string} $pathInfo */
+        $pathInfo = pathinfo($filePath);
+        $filename = $pathInfo['filename'] ?? '';
+        $extension = $pathInfo['extension'] ?? '';
+
+        if (!in_array($extension, array_keys($extensionsToClass), true)) {
+            return null;
+        }
+
+        $class = $extensionsToClass[$extension];
+
+        /** @var Asset|BaseAsset $asset */
+        $asset = new $class($handle, $fileUrl, $this->resolveLocation($filename));
+        $asset->withFilePath($filePath);
+        $asset->canEnqueue(true);
+
+        if ($asset instanceof BaseAsset) {
+            $this->autodiscoverVersion
+                ? $asset->enableAutodiscoverVersion()
+                : $asset->disableAutodiscoverVersion();
+        }
+
+        return $asset;
     }
 
     /**

@@ -36,7 +36,7 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
     /**
      * @param ViteManifestLoader                       $loader
      * @param ModuleTypeScriptOutputFilter             $esModuleFilter
-     * @param list<string>                             $viteManifests
+     * @param list<string|null>                        $viteManifests
      * @param callable|null                            $scriptFilter
      * @param array<string, ScriptFilterCallable|bool> $scriptFilters
      * @param callable|null                            $styleFilter
@@ -203,6 +203,9 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
     {
         $assets = [];
         foreach ($this->viteManifests as $viteManifest) {
+            if ($viteManifest === null) {
+                continue;
+            }
             $assets = array_merge($assets, $this->loader->load($viteManifest));
         }
         return $assets;
