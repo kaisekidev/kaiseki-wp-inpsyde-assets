@@ -21,6 +21,7 @@ use function array_unshift;
 use function array_values;
 use function count;
 use function is_callable;
+use function is_string;
 use function ltrim;
 
 /**
@@ -28,6 +29,7 @@ use function ltrim;
  * @phpstan-type ScriptFilterCallable callable(Script $script, string $handle): Script
  * @phpstan-type StyleFilterCallable callable(Style $style, string $handle): Style
  * @phpstan-type ViteManifestCallback callable(ViteClient): string|null
+ * @phpstan-type DirectoryUrlCallback callable(ViteClient): string
  */
 class ViteManifestRegistry implements HookCallbackProviderInterface
 {
@@ -58,16 +60,20 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
         ?callable $styleFilter = null,
         private array $styleFilters = [],
         private bool $autoload = true,
-        string $directoryUrl = '',
+        mixed $directoryUrl = '',
         private string $handlePrefix = '',
         private bool $esModules = true,
     ) {
         $this->scriptFilter = is_callable($scriptFilter) ? $scriptFilter(...) : null;
         $this->styleFilter = is_callable($styleFilter) ? $styleFilter(...) : null;
 
-        if ($directoryUrl !== '') {
+        if (is_string($directoryUrl) && $directoryUrl !== '') {
+            $directoryUrl = is_callable($directoryUrl) ? $directoryUrl($this->viteClient) : $directoryUrl;
             $this->loader->withDirectoryUrl($directoryUrl);
+        } elseif (is_callable($directoryUrl)) {
+            $this->loader->withDirectoryUrl($directoryUrl($this->viteClient));
         }
+
         if ($handlePrefix === '') {
             return;
         }
@@ -162,13 +168,13 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
     /**
      * Set the directory url for assets.
      *
-     * @param string $directoryUrl
+     * @param string|DirectoryUrlCallback $directoryUrl
      *
      * @return $this
      */
-    public function withDirectoryUrl(string $directoryUrl): self
+    public function withDirectoryUrl(string|callable $directoryUrl): self
     {
-        $this->directoryUrl = $directoryUrl;
+        $this->directoryUrl = is_callable($directoryUrl) ? $directoryUrl($this->viteClient) : $directoryUrl;
         $this->loader->withDirectoryUrl($this->directoryUrl);
         return $this;
     }

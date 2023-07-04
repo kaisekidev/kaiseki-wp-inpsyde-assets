@@ -37,7 +37,7 @@ final class ViteManifestRegistryFactory
             $config->callable('vite_manifest/style_filter', $baseFilter),
             $styles,
             $config->bool('vite_manifest/autoload', false),
-            $config->string('vite_manifest/directory_url', ''),
+            $config->get('vite_manifest/directory_url', ''),
             $config->string('vite_manifest/handle_prefix', ''),
             $config->bool('vite_manifest/es_modules', true),
         );

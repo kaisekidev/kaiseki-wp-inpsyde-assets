@@ -32,7 +32,7 @@
     "php": "^8.1",
     "inpsyde/assets": "^2.8",
     "jjgrainger/posttypes": "^2.2",
-    "kaiseki/config": "1.0.0",
+    "kaiseki/config": "^1.1.0",
     "kaiseki/wp-env": "dev-master",
     "kaiseki/wp-hook": "dev-dev",
     "oscarotero/env": "^2.1",
