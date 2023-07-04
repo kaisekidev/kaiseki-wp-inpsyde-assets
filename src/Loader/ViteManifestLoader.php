@@ -7,10 +7,12 @@ namespace Kaiseki\WordPress\InpsydeAssets\Loader;
 use Inpsyde\Assets\Asset;
 use Inpsyde\Assets\BaseAsset;
 use Inpsyde\Assets\Loader\AbstractWebpackLoader;
-
 use Inpsyde\Assets\Script;
 use Inpsyde\Assets\Style;
+
+use function array_keys;
 use function dirname;
+use function in_array;
 use function is_array;
 use function pathinfo;
 use function str_starts_with;

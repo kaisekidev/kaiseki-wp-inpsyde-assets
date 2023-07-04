@@ -4,9 +4,13 @@
         "static", "self", "parent",
         "array", "string", "int", "float", "bool", "iterable", "callable", "void", "object",
         "add_action",
+        "get_current_screen",
+        "is_admin",
+        "wp_remote_get",
         "trailingslashit",
         "Safe\\preg_match",
-        "Safe\\preg_replace"
+        "Safe\\preg_replace",
+        "Safe\\sprintf"
     ],
     "php-core-extensions" : [
         "Core",

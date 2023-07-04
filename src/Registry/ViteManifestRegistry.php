@@ -12,6 +12,7 @@ use Inpsyde\Assets\Style;
 use Kaiseki\WordPress\Hook\HookCallbackProviderInterface;
 use Kaiseki\WordPress\InpsydeAssets\Loader\ViteManifestLoader;
 use Kaiseki\WordPress\InpsydeAssets\OutputFilter\ModuleTypeScriptOutputFilter;
+use Kaiseki\WordPress\InpsydeAssets\ViteClient\ViteClient;
 
 use function add_action;
 use function array_merge;
@@ -26,6 +27,7 @@ use function ltrim;
  * @phpstan-type AssetFilterCallable callable(Asset $asset, string $handle): Asset
  * @phpstan-type ScriptFilterCallable callable(Script $script, string $handle): Script
  * @phpstan-type StyleFilterCallable callable(Style $style, string $handle): Style
+ * @phpstan-type ViteManifestCallback callable(ViteClient): string|null
  */
 class ViteManifestRegistry implements HookCallbackProviderInterface
 {
@@ -36,7 +38,8 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
     /**
      * @param ViteManifestLoader                       $loader
      * @param ModuleTypeScriptOutputFilter             $esModuleFilter
-     * @param list<string|null>                        $viteManifests
+     * @param ViteClient                               $viteClient
+     * @param list<string|ViteManifestCallback|null>   $viteManifests
      * @param callable|null                            $scriptFilter
      * @param array<string, ScriptFilterCallable|bool> $scriptFilters
      * @param callable|null                            $styleFilter
@@ -46,8 +49,9 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
      * @param bool                                     $esModules
      */
     public function __construct(
-        private readonly ViteManifestLoader $loader = new ViteManifestLoader(),
-        private readonly ModuleTypeScriptOutputFilter $esModuleFilter = new ModuleTypeScriptOutputFilter(),
+        private readonly ViteManifestLoader $loader,
+        private readonly ModuleTypeScriptOutputFilter $esModuleFilter,
+        private readonly ViteClient $viteClient,
         private array $viteManifests = [],
         ?callable $scriptFilter = null,
         private array $scriptFilters = [],
@@ -203,6 +207,9 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
     {
         $assets = [];
         foreach ($this->viteManifests as $viteManifest) {
+            if (is_callable($viteManifest)) {
+                $viteManifest = $viteManifest($this->viteClient);
+            }
             if ($viteManifest === null) {
                 continue;
             }

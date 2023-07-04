@@ -8,6 +8,7 @@ use Inpsyde\Assets\Asset;
 use Kaiseki\Config\Config;
 use Kaiseki\WordPress\InpsydeAssets\Loader\ViteManifestLoader;
 use Kaiseki\WordPress\InpsydeAssets\OutputFilter\ModuleTypeScriptOutputFilter;
+use Kaiseki\WordPress\InpsydeAssets\ViteClient\ViteClient;
 use Psr\Container\ContainerInterface;
 
 /**
@@ -29,6 +30,7 @@ final class ViteManifestRegistryFactory
         return new ViteManifestRegistry(
             $container->get(ViteManifestLoader::class),
             $container->get(ModuleTypeScriptOutputFilter::class),
+            $container->get(ViteClient::class),
             $files,
             $config->callable('vite_manifest/script_filter', $baseFilter),
             $scripts,
