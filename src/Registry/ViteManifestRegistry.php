@@ -25,11 +25,11 @@ use function is_string;
 use function ltrim;
 
 /**
- * @phpstan-type AssetFilterCallable callable(Asset $asset, string $handle): Asset
- * @phpstan-type ScriptFilterCallable callable(Script $script, string $handle): Script
- * @phpstan-type StyleFilterCallable callable(Style $style, string $handle): Style
- * @phpstan-type ViteManifestCallback callable(ViteClient): string|null
- * @phpstan-type DirectoryUrlCallback callable(ViteClient): string
+ * @phpstan-type AssetFilterCallable callable(Asset $asset, string $handle, ViteClient $viteClient): Asset
+ * @phpstan-type ScriptFilterCallable callable(Script $script, string $handle, ViteClient $viteClient): Script
+ * @phpstan-type StyleFilterCallable callable(Style $style, string $handle, ViteClient $viteClient): Style
+ * @phpstan-type ViteManifestCallback callable(ViteClient $viteClient): string|null
+ * @phpstan-type DirectoryUrlCallback callable(ViteClient $viteClient): string
  */
 class ViteManifestRegistry implements HookCallbackProviderInterface
 {
@@ -42,9 +42,9 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
      * @param ModuleTypeScriptOutputFilter             $esModuleFilter
      * @param ViteClient                               $viteClient
      * @param list<string|ViteManifestCallback|null>   $viteManifests
-     * @param callable|null                            $scriptFilter
+     * @param ScriptFilterCallable|null                $scriptFilter
      * @param array<string, ScriptFilterCallable|bool> $scriptFilters
-     * @param callable|null                            $styleFilter
+     * @param StyleFilterCallable|null                 $styleFilter
      * @param array<string, StyleFilterCallable|bool>  $styleFilters
      * @param bool                                     $autoload
      * @param string                                   $handlePrefix
@@ -259,7 +259,7 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
 
         $typeFilter = $isScript ? $this->scriptFilter : $this->styleFilter;
         if ($typeFilter !== null) {
-            $asset = $typeFilter($asset, $handle);
+            $asset = $typeFilter($asset, $handle, $this->viteClient);
         }
 
         if ($isScript && $this->esModules) {
