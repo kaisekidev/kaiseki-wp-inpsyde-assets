@@ -297,10 +297,15 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
      */
     private function getFilter(string $handle, array $filters): callable|bool|null
     {
+        $handleWithoutPrefix = \Safe\preg_replace(
+            '/^' . preg_quote($this->handlePrefix, '/') . '/',
+            '',
+            $handle
+        );
         foreach ($filters as $filterHandle => $filter) {
             if (
                 $filterHandle === $handle
-                || $filterHandle === ltrim($handle, $this->handlePrefix)
+                || $filterHandle === $handleWithoutPrefix
             ) {
                 return $filter;
             }
