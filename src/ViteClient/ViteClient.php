@@ -10,10 +10,13 @@ use Kaiseki\WordPress\Hook\HookCallbackProviderInterface;
 use function Env\env;
 use function function_exists;
 use function is_array;
+use function is_bool;
 
 final class ViteClient implements HookCallbackProviderInterface
 {
     private const VITE_CLIENT = '@vite/client';
+
+    private ?bool $isViteClientActive = null;
 
     public function __construct(
         private readonly EnvironmentInterface $environment,
@@ -55,8 +58,11 @@ final class ViteClient implements HookCallbackProviderInterface
         if (!$this->environment->isLocal() && !$this->environment->isDevelopment()) {
             return false;
         }
-        $response = wp_remote_get(trailingslashit(self::getServerUrl()) . self::VITE_CLIENT);
-        return is_array($response) && $response['response']['code'] === 200;
+        if (is_bool($this->isViteClientActive)) {
+            return $this->isViteClientActive;
+        }
+        $url = trailingslashit(self::getServerUrl()) . self::VITE_CLIENT;
+        return $this->isViteClientActive = $this->checkUrlWithCurl($url);
     }
 
     private function isBlockEditor(): bool
@@ -66,5 +72,15 @@ final class ViteClient implements HookCallbackProviderInterface
         }
 
         return (bool)get_current_screen()?->is_block_editor();
+    }
+
+    private function checkUrlWithCurl($url): bool
+    {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return $httpCode === 200;
     }
 }
