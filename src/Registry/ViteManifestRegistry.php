@@ -284,7 +284,7 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
                 : null;
         }
 
-        return $assetFilter($asset, $handle);
+        return $assetFilter($asset, $handle, $this->viteClient);
     }
 
     /**
