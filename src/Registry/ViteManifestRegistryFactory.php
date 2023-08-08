@@ -6,6 +6,7 @@ namespace Kaiseki\WordPress\InpsydeAssets\Registry;
 
 use Inpsyde\Assets\Asset;
 use Kaiseki\Config\Config;
+use Kaiseki\Config\ConfigInterface;
 use Kaiseki\WordPress\InpsydeAssets\Loader\ViteManifestLoader;
 use Kaiseki\WordPress\InpsydeAssets\OutputFilter\ModuleTypeScriptOutputFilter;
 use Kaiseki\WordPress\InpsydeAssets\ViteClient\ViteClient;
@@ -20,6 +21,8 @@ final class ViteManifestRegistryFactory
     public function __invoke(ContainerInterface $container): ViteManifestRegistry
     {
         $config = Config::get($container);
+        /** @var ViteClient $viteClient */
+        $viteClient = $container->get(ViteClient::class);
         $baseFilter = fn(Asset $asset, string $handle): Asset => $asset;
         /** @var list<string> $files */
         $files = $config->array('vite_manifest/files', []);
@@ -41,5 +44,10 @@ final class ViteManifestRegistryFactory
             $config->string('vite_manifest/handle_prefix', ''),
             $config->bool('vite_manifest/es_modules', true),
         );
+    }
+
+    private function getDirectoryUrl(ConfigInterface $config, ViteClient $viteClient): string
+    {
+        $config->get('vite_manifest/directory_url', '');
     }
 }
