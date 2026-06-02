@@ -4,6 +4,7 @@
         "static", "self", "parent",
         "array", "string", "int", "float", "bool", "iterable", "callable", "void", "object", "mixed",
         "add_action",
+        "esc_url",
         "get_current_screen",
         "is_admin",
         "is_wp_error",

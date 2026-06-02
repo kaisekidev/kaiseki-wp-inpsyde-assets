@@ -29,6 +29,10 @@ First tagged release.
 
 ### Fixed
 
+- Config 2.0 changed the nested-key delimiter from `/` to `.`; all `vite_manifest/*` and `vite_client/*`
+  lookups in the factories were updated to `vite_manifest.*` / `vite_client.*`. Without this they would
+  have silently fallen back to defaults.
+- `ViteClient` now escapes the Vite dev-server script URL with `esc_url()` before echoing it.
 - `ViteManifestRegistryFactory` referenced a non-existent `Config::callable()` and carried a dead,
   return-less `getDirectoryUrl()` method — both removed; filters are read via `Config::get()` and
   validated with `is_callable()`.

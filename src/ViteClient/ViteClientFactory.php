@@ -16,8 +16,8 @@ final class ViteClientFactory
 
         return new ViteClient(
             $container->get(EnvironmentInterface::class),
-            $config->string('vite_client/host', 'localhost'),
-            $config->int('vite_client/port', 5173),
+            $config->string('vite_client.host', 'localhost'),
+            $config->int('vite_client.port', 5173),
         );
     }
 }

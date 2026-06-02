@@ -19,22 +19,22 @@ final class ViteManifestRegistryFactory
     {
         $config = Config::fromContainer($container);
         $baseFilter = fn(Asset $asset, ViteClient $viteClient, string $handle): Asset => $asset;
-        $scriptFilter = $config->get('vite_manifest/script_filter', $baseFilter);
-        $styleFilter = $config->get('vite_manifest/style_filter', $baseFilter);
+        $scriptFilter = $config->get('vite_manifest.script_filter', $baseFilter);
+        $styleFilter = $config->get('vite_manifest.style_filter', $baseFilter);
 
         return new ViteManifestRegistry(
             $container->get(ViteManifestLoader::class),
             $container->get(ModuleTypeScriptOutputFilter::class),
             $container->get(ViteClient::class),
-            $config->array('vite_manifest/files', []),
+            $config->array('vite_manifest.files', []),
             is_callable($scriptFilter) ? $scriptFilter : $baseFilter,
-            $config->array('vite_manifest/scripts', []),
+            $config->array('vite_manifest.scripts', []),
             is_callable($styleFilter) ? $styleFilter : $baseFilter,
-            $config->array('vite_manifest/styles', []),
-            $config->bool('vite_manifest/autoload', false),
-            $config->get('vite_manifest/directory_url', ''),
-            $config->string('vite_manifest/handle_prefix', ''),
-            $config->bool('vite_manifest/es_modules', true),
+            $config->array('vite_manifest.styles', []),
+            $config->bool('vite_manifest.autoload', false),
+            $config->get('vite_manifest.directory_url', ''),
+            $config->string('vite_manifest.handle_prefix', ''),
+            $config->bool('vite_manifest.es_modules', true),
         );
     }
 }

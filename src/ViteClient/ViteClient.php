@@ -9,6 +9,7 @@ use Kaiseki\WordPress\Hook\HookProviderInterface;
 
 use function add_action;
 use function Env\env;
+use function esc_url;
 use function function_exists;
 use function get_current_screen;
 use function is_admin;
@@ -44,11 +45,9 @@ final class ViteClient implements HookProviderInterface
             return;
         }
 
-        echo sprintf(
-            '<script type="module" src="%s%s"></script>',
-            trailingslashit($this->getServerUrl()),
-            self::VITE_CLIENT
-        );
+        $src = esc_url(trailingslashit($this->getServerUrl()) . self::VITE_CLIENT);
+
+        echo sprintf('<script type="module" src="%s"></script>', $src);
     }
 
     public function getServerUrl(): string
