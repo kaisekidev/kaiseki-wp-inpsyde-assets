@@ -5,14 +5,22 @@ declare(strict_types=1);
 namespace Kaiseki\WordPress\InpsydeAssets\ViteClient;
 
 use Kaiseki\WordPress\Environment\EnvironmentInterface;
-use Kaiseki\WordPress\Hook\HookCallbackProviderInterface;
+use Kaiseki\WordPress\Hook\HookProviderInterface;
 
+use function add_action;
 use function Env\env;
+use function esc_url;
 use function function_exists;
-use function is_array;
+use function get_current_screen;
+use function is_admin;
 use function is_bool;
+use function is_wp_error;
+use function Safe\sprintf;
+use function trailingslashit;
+use function wp_remote_get;
+use function wp_remote_retrieve_response_code;
 
-final class ViteClient implements HookCallbackProviderInterface
+final class ViteClient implements HookProviderInterface
 {
     private const VITE_CLIENT = '@vite/client';
 
@@ -25,7 +33,7 @@ final class ViteClient implements HookCallbackProviderInterface
     ) {
     }
 
-    public function registerHookCallbacks(): void
+    public function addHooks(): void
     {
         add_action('wp_head', [$this, 'renderViteClientScript']);
         add_action('admin_head', [$this, 'renderViteClientScript']);
@@ -33,20 +41,18 @@ final class ViteClient implements HookCallbackProviderInterface
 
     public function renderViteClientScript(): void
     {
-        if (!self::isHot() || (is_admin() && !$this->isBlockEditor())) {
+        if (!$this->isHot() || (is_admin() && !$this->isBlockEditor())) {
             return;
         }
 
-        echo \Safe\sprintf(
-            '<script type="module" src="%s%s"></script>',
-            trailingslashit($this->getServerUrl()),
-            self::VITE_CLIENT
-        );
+        $src = esc_url(trailingslashit($this->getServerUrl()) . self::VITE_CLIENT);
+
+        echo sprintf('<script type="module" src="%s"></script>', $src);
     }
 
     public function getServerUrl(): string
     {
-        return \Safe\sprintf(
+        return sprintf(
             'http://%s:%s/',
             env('VITE_HOST') !== null ? env('VITE_HOST') : $this->host,
             env('VITE_PORT') !== null ? env('VITE_PORT') : $this->port,
@@ -61,8 +67,9 @@ final class ViteClient implements HookCallbackProviderInterface
         if (is_bool($this->isViteClientActive)) {
             return $this->isViteClientActive;
         }
-        $url = trailingslashit(self::getServerUrl()) . self::VITE_CLIENT;
-        return $this->isViteClientActive = $this->checkUrlWithCurl($url);
+        $url = trailingslashit($this->getServerUrl()) . self::VITE_CLIENT;
+
+        return $this->isViteClientActive = $this->checkUrl($url);
     }
 
     private function isBlockEditor(): bool
@@ -74,13 +81,13 @@ final class ViteClient implements HookCallbackProviderInterface
         return (bool)get_current_screen()?->is_block_editor();
     }
 
-    private function checkUrlWithCurl($url): bool
+    private function checkUrl(string $url): bool
     {
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        return $httpCode === 200;
+        $response = wp_remote_get($url, ['timeout' => 1]);
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        return wp_remote_retrieve_response_code($response) === 200;
     }
 }

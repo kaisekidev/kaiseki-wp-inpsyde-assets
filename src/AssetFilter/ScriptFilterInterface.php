@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Kaiseki\WordPress\InpsydeAssets\Interface;
+namespace Kaiseki\WordPress\InpsydeAssets\AssetFilter;
 
 use Inpsyde\Assets\Script;
 

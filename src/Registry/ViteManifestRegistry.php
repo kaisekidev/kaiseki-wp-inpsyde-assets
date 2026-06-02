@@ -9,20 +9,17 @@ use Inpsyde\Assets\Asset;
 use Inpsyde\Assets\AssetManager;
 use Inpsyde\Assets\Script;
 use Inpsyde\Assets\Style;
-use Kaiseki\WordPress\Hook\HookCallbackProviderInterface;
+use Kaiseki\WordPress\Hook\HookProviderInterface;
 use Kaiseki\WordPress\InpsydeAssets\Loader\ViteManifestLoader;
 use Kaiseki\WordPress\InpsydeAssets\OutputFilter\ModuleTypeScriptOutputFilter;
 use Kaiseki\WordPress\InpsydeAssets\ViteClient\ViteClient;
 
 use function add_action;
-use function array_merge;
-use function array_reduce;
-use function array_unshift;
-use function array_values;
 use function count;
 use function is_callable;
 use function is_string;
-use function ltrim;
+use function preg_quote;
+use function Safe\preg_replace;
 
 /**
  * @phpstan-type AssetFilterCallable callable(Asset $asset, ViteClient $viteClient, string $handle): Asset
@@ -31,23 +28,24 @@ use function ltrim;
  * @phpstan-type ViteManifestCallback callable(ViteClient $viteClient): string|null
  * @phpstan-type DirectoryUrlCallback callable(ViteClient $viteClient): string
  */
-class ViteManifestRegistry implements HookCallbackProviderInterface
+class ViteManifestRegistry implements HookProviderInterface
 {
     private ?Closure $scriptFilter;
     private ?Closure $styleFilter;
 
     /**
-     * @param ViteManifestLoader                       $loader
-     * @param ModuleTypeScriptOutputFilter             $esModuleFilter
-     * @param ViteClient                               $viteClient
-     * @param list<string|ViteManifestCallback|null>   $viteManifests
-     * @param ScriptFilterCallable|null                $scriptFilter
-     * @param array<string, ScriptFilterCallable|bool> $scriptFilters
-     * @param StyleFilterCallable|null                 $styleFilter
-     * @param array<string, StyleFilterCallable|bool>  $styleFilters
-     * @param bool                                     $autoload
-     * @param string                                   $handlePrefix
-     * @param bool                                     $esModules
+     * @param ViteManifestLoader           $loader
+     * @param ModuleTypeScriptOutputFilter $esModuleFilter
+     * @param ViteClient                   $viteClient
+     * @param array<array-key, mixed>      $viteManifests  list<string|ViteManifestCallback|null>
+     * @param ScriptFilterCallable|null    $scriptFilter
+     * @param array<array-key, mixed>      $scriptFilters  map of handle => ScriptFilterCallable|bool
+     * @param StyleFilterCallable|null     $styleFilter
+     * @param array<array-key, mixed>      $styleFilters   map of handle => StyleFilterCallable|bool
+     * @param bool                         $autoload
+     * @param mixed                        $directoryUrl
+     * @param string                       $handlePrefix
+     * @param bool                         $esModules
      */
     public function __construct(
         private readonly ViteManifestLoader $loader,
@@ -66,11 +64,11 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
         $this->scriptFilter = is_callable($scriptFilter) ? $scriptFilter(...) : null;
         $this->styleFilter = is_callable($styleFilter) ? $styleFilter(...) : null;
 
+        if (is_callable($directoryUrl)) {
+            $directoryUrl = $directoryUrl($this->viteClient);
+        }
         if (is_string($directoryUrl) && $directoryUrl !== '') {
-            $directoryUrl = is_callable($directoryUrl) ? $directoryUrl($this->viteClient) : $directoryUrl;
             $this->loader->withDirectoryUrl($directoryUrl);
-        } elseif (is_callable($directoryUrl)) {
-            $this->loader->withDirectoryUrl($directoryUrl($this->viteClient));
         }
 
         if ($handlePrefix === '') {
@@ -80,7 +78,7 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
         $this->loader->withHandlePrefix($handlePrefix);
     }
 
-    public function registerHookCallbacks(): void
+    public function addHooks(): void
     {
         add_action(AssetManager::ACTION_SETUP, [$this, 'registerAssets']);
     }
@@ -89,8 +87,6 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
      * Hook callback to register assets.
      *
      * @param AssetManager $assetManager
-     *
-     * @return void
      */
     public function registerAssets(AssetManager $assetManager): void
     {
@@ -117,37 +113,36 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
                 $viteManifest = $viteManifest($this->viteClient);
             }
 
-            if ($viteManifest === null) {
+            if (!is_string($viteManifest) || $viteManifest === '') {
                 continue;
             }
 
-            $assets = array_merge($assets, $this->loader->load($viteManifest));
+            foreach ($this->loader->load($viteManifest) as $asset) {
+                if ($asset instanceof Asset) {
+                    $assets[] = $asset;
+                }
+            }
         }
 
         return $assets;
     }
 
     /**
-     *
      * @param list<Asset> $assets
      *
      * @return list<Asset>
      */
     protected function filterAssets(array $assets): array
     {
-        return array_reduce(
-            $assets,
-            function (array $carry, Asset $asset): array {
-                $filteredAsset = $this->filterAsset($asset);
+        $filtered = [];
+        foreach ($assets as $asset) {
+            $filteredAsset = $this->filterAsset($asset);
+            if ($filteredAsset !== null) {
+                $filtered[] = $filteredAsset;
+            }
+        }
 
-                if ($filteredAsset !== null) {
-                    $carry[] = $filteredAsset;
-                }
-
-                return $carry;
-            },
-            []
-        );
+        return $filtered;
     }
 
     /**
@@ -166,10 +161,14 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
         $typeFilter = $isScript ? $this->scriptFilter : $this->styleFilter;
 
         if (is_callable($typeFilter)) {
-            $asset = $typeFilter($asset, $this->viteClient, $handle);
+            $filtered = $typeFilter($asset, $this->viteClient, $handle);
+            if (!$filtered instanceof Asset) {
+                return null;
+            }
+            $asset = $filtered;
         }
 
-        if ($isScript && $this->esModules) {
+        if ($isScript && $this->esModules && $asset instanceof Script) {
             $asset->withFilters($this->esModuleFilter);
         }
 
@@ -185,23 +184,26 @@ class ViteManifestRegistry implements HookCallbackProviderInterface
             if ($this->autoload === false && $assetFilter === true) {
                 return $asset;
             }
-            return  null;
+
+            return null;
         }
 
-        return $assetFilter($asset, $this->viteClient, $handle);
+        $filtered = $assetFilter($asset, $this->viteClient, $handle);
+
+        return $filtered instanceof Asset ? $filtered : null;
     }
 
     /**
      * Get filter by handle.
      *
-     * @param string $handle
-     * @param array<string, ScriptFilterCallable|StyleFilterCallable|bool> $filters
+     * @param string                  $handle
+     * @param array<array-key, mixed> $filters map of handle => ScriptFilterCallable|StyleFilterCallable|bool
      *
-     * @return ScriptFilterCallable|StyleFilterCallable|null
+     * @return mixed ScriptFilterCallable|StyleFilterCallable|bool|null
      */
-    private function getFilter(string $handle, array $filters): callable|bool|null
+    private function getFilter(string $handle, array $filters): mixed
     {
-        $handleWithoutPrefix = \Safe\preg_replace(
+        $handleWithoutPrefix = preg_replace(
             '/^' . preg_quote($this->handlePrefix, '/') . '/',
             '',
             $handle

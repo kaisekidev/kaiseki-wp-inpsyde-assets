@@ -18,6 +18,7 @@ class ModuleTypeScriptOutputFilter implements AssetOutputFilter
         if ((bool)\Safe\preg_match('/type=["\'][^"\']*["\']/', $html)) {
             return \Safe\preg_replace('/type=["\'][^"\']*["\']/', 'type="module"', $html);
         }
+
         return \Safe\preg_replace('/<script/', '<script type="module"', $html);
     }
 }

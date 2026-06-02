@@ -4,13 +4,13 @@
         "static", "self", "parent",
         "array", "string", "int", "float", "bool", "iterable", "callable", "void", "object", "mixed",
         "add_action",
+        "esc_url",
         "get_current_screen",
         "is_admin",
-        "wp_remote_get",
+        "is_wp_error",
         "trailingslashit",
-        "Safe\\preg_match",
-        "Safe\\preg_replace",
-        "Safe\\sprintf"
+        "wp_remote_get",
+        "wp_remote_retrieve_response_code"
     ],
     "php-core-extensions" : [
         "Core",
