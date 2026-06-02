@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Kaiseki\WordPress\InpsydeAssets\Loader;
 
 use Inpsyde\Assets\Asset;
-use Inpsyde\Assets\BaseAsset;
 use Inpsyde\Assets\Loader\AbstractWebpackLoader;
 use Inpsyde\Assets\Script;
 use Inpsyde\Assets\Style;
@@ -14,8 +13,10 @@ use function array_keys;
 use function dirname;
 use function in_array;
 use function is_array;
+use function is_string;
 use function pathinfo;
 use function str_starts_with;
+use function trailingslashit;
 
 use const PATHINFO_FILENAME;
 
@@ -26,16 +27,14 @@ use const PATHINFO_FILENAME;
  */
 class ViteManifestLoader extends AbstractWebpackLoader
 {
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $handlePrefix = '';
 
     /**
      * {@inheritDoc}
      *
-     * @param array<string, mixed>  $data
-     * @param string $resource
+     * @param array<string, mixed> $data
+     * @param string               $resource
      *
      * @return list<Asset>
      */
@@ -52,7 +51,7 @@ class ViteManifestLoader extends AbstractWebpackLoader
             }
 
             $file = is_array($entry) && isset($entry['file']) ? $entry['file'] : null;
-            if ($file === null) {
+            if (!is_string($file) || $file === '') {
                 continue;
             }
             $sanitizedFile = $this->sanitizeFileName($file);
@@ -98,7 +97,6 @@ class ViteManifestLoader extends AbstractWebpackLoader
             'ts' => Script::class,
         ];
 
-        /** @var array{filename?:string, extension?:string} $pathInfo */
         $pathInfo = pathinfo($filePath);
         $filename = $pathInfo['filename'] ?? '';
         $extension = $pathInfo['extension'] ?? '';
@@ -109,16 +107,13 @@ class ViteManifestLoader extends AbstractWebpackLoader
 
         $class = $extensionsToClass[$extension];
 
-        /** @var Asset|BaseAsset $asset */
         $asset = new $class($handle, $fileUrl, $this->resolveLocation($filename));
         $asset->withFilePath($filePath);
         $asset->canEnqueue(true);
 
-        if ($asset instanceof BaseAsset) {
-            $this->autodiscoverVersion
-                ? $asset->enableAutodiscoverVersion()
-                : $asset->disableAutodiscoverVersion();
-        }
+        $this->autodiscoverVersion
+            ? $asset->enableAutodiscoverVersion()
+            : $asset->disableAutodiscoverVersion();
 
         return $asset;
     }
